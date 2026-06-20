@@ -1,0 +1,24 @@
+# SpoolTap — NEVER commit a user's real install values.
+# Your values live here; this file is intentionally ignored.
+secrets.yaml
+secrets.yml
+*.secret.yaml
+*.secrets.yaml
+
+# Home Assistant runtime / local state
+.storage/
+*.db
+*.db-shm
+*.db-wal
+home-assistant.log*
+.HA_VERSION
+
+# Python / tooling
+__pycache__/
+*.pyc
+
+# Editor / OS noise
+.vscode/
+.idea/
+.DS_Store
+*.swp
