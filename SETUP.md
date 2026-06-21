@@ -34,17 +34,24 @@ however long it takes to sticker your spool collection.
 | `spooltap_printer_id` | Your printer's id in Bambuddy | `GET /api/v1/printers/` on the Bambuddy API |
 | `spooltap_ams_prefix` | Your AMS tray-sensor stem (the part before `left_tray_1`) | Developer Tools → States, search `tray_1` |
 | `spooltap_external_sensor` | Your external-spool sensor | Developer Tools → States, search `external` |
+| `spooltap_print_status_sensor` | Your printer's print-status sensor | Developer Tools → States, search `print_status` |
 | `spooltap_notify_target` | Your phone's notify service | Developer Tools → Actions, search `notify.mobile_app` |
 | `spooltap_nozzle` | Your nozzle diameter (setting_ids are per-nozzle) | e.g. `0.4` |
 
 3. Restart Home Assistant (first install creates many new entities), then tap
    **SpoolTap: Apply Config** on the dashboard to push your `secrets.yaml`
-   values into the system. Re-run it any time you change `secrets.yaml`.
+   values into the system. Any time you change `secrets.yaml` later: reload the
+   YAML config (or restart) first so `!secret` re-resolves, **then** re-run
+   Apply Config.
 
-> **AMS topology:** SpoolTap ships configured for a dual-AMS layout
-> (`left_1…left_4`, `right_1…right_4`, plus `external`). If you run a single
-> AMS, delete the `right_*` entries from the helper options and slot maps —
-> look for the comments marked `TOPOLOGY` in `spooltap.yaml`.
+> **AMS topology (one hand-edit needed).** SpoolTap ships configured for a
+> dual-AMS layout (`left_1…left_4`, `right_1…right_4`, plus `external`). Two
+> spots in `spooltap.yaml` reference your AMS tray sensors by **literal name**
+> (Home Assistant forbids templating trigger entity-ids) — find the comments
+> marked `TOPOLOGY` and replace the placeholder sensor names with your real
+> ones. **Critical:** the names there must match `spooltap_ams_prefix` exactly
+> (the part before `left_tray_1`) — a mismatch silently breaks empty-slot
+> assignment. Running a single AMS? Also delete the `right_*` lines there.
 
 ## Part 2 — One-time Spoolman fields
 
