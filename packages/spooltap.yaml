@@ -3069,6 +3069,122 @@ script:
               {%- endif -%}
             {%- endfor -%}
             {{ ns.rows }}
+      # ── 5b. Dedup: enforce one-spool-one-slot (oscillation fix) ──
+      # A spool with >1 BB row (e.g. an AMS slot + a stale `external` ghost from
+      # moving the spool out of external) makes the BB_ONLY heal (step 7) flap
+      # Spoolman's nfc_active_tray between the two slots every cycle → the
+      # printer slot drops Empty. Resolve STRUCTURALLY by ams_id (the tray
+      # sensor can't arbitrate: 3rd-party spools have tag_uid=0 and a
+      # profile-derived `state` that lies):
+      #   * exactly 1 AMS row + the external row → keep the AMS slot. external
+      #     (ams 255) is the unverifiable transient leftover by construction.
+      #     bambuddy_unassign_spool deletes ALL the spool's BB rows (its DELETE
+      #     is by-spool, no slot filter — confirmed from BB source), then PATCH
+      #     Spoolman to the keeper, and prune the spool from bb_rows so the
+      #     keeper flows through the SM_ONLY heal below at ONE consistent slot
+      #     (re-asserting assign+configure; the storm guard then backstops any
+      #     recurrence — which the original bug evaded only because BB_ONLY
+      #     alternated slots).
+      #   * >=2 AMS rows → a real spool can't be in two trays; don't guess.
+      #     Freeze it (drop from both bb_rows and sm_rows, no heal touches it
+      #     this cycle) + ⚠. Fail-loud on true ambiguity.
+      - variables:
+          # spool_ids appearing in more than one BB row.
+          dup_spool_ids: >-
+            {%- set counts = bb_rows | map(attribute='spool_id') | list -%}
+            {%- set ns = namespace(ids=[]) -%}
+            {%- for sid in counts | unique -%}
+              {%- if sid | int(0) > 0 and (counts | select('eq', sid) | list | count) > 1 -%}
+                {%- set ns.ids = ns.ids + [sid] -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {{ ns.ids }}
+          # Per duplicated spool: resolve (keep the lone AMS slot) or freeze.
+          dup_plan: >-
+            {%- set ns = namespace(plan=[]) -%}
+            {%- for sid in dup_spool_ids -%}
+              {%- set rows = bb_rows | selectattr('spool_id', 'eq', sid) | list -%}
+              {%- set ams_rows = rows | rejectattr('ams', 'eq', 255) | list -%}
+              {%- if (ams_rows | count) == 1 -%}
+                {%- set k = ams_rows[0] -%}
+                {%- set ns.plan = ns.plan + [{'spool_id': sid, 'action': 'resolve',
+                     'keeper_slot': k.slot, 'keeper_ams': k.ams, 'keeper_tray': k.tray}] -%}
+              {%- else -%}
+                {%- set ns.plan = ns.plan + [{'spool_id': sid, 'action': 'freeze'}] -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {{ ns.plan }}
+      # Resolve: delete ALL of the spool's BB rows, then PATCH Spoolman to keeper.
+      - repeat:
+          for_each: "{{ dup_plan | selectattr('action', 'eq', 'resolve') | list }}"
+          sequence:
+            - variables:
+                _spool_id: "{{ repeat.item.spool_id }}"
+                _keeper: "{{ repeat.item.keeper_slot }}"
+            - action: rest_command.bambuddy_unassign_spool
+              data:
+                spool_id: "{{ _spool_id }}"
+              continue_on_error: true
+            - action: rest_command.spoolman_get_spool
+              data:
+                spool_id: "{{ _spool_id }}"
+              response_variable: dspool
+              continue_on_error: true
+            - if:
+                - condition: template
+                  value_template: "{{ dspool is defined and dspool.status | default(0) == 200 }}"
+              then:
+                - variables:
+                    dextra: >-
+                      {{ (dspool.content.extra | default({}))
+                         | combine({'nfc_active_tray': '"' ~ _keeper ~ '"'}) }}
+                - action: rest_command.spoolman_patch_spool
+                  data:
+                    spool_id: "{{ _spool_id }}"
+                    body: "{{ {'extra': dextra} | to_json }}"
+                  continue_on_error: true
+                - event: nfc_reconciler_heal
+                  event_data:
+                    direction: "DEDUP (kept AMS, dropped ghost)"
+                    slot: "{{ _keeper }}"
+                    spool_id: "{{ _spool_id | int(0) }}"
+                    spool_name: "{{ dspool.content.filament.name | default('spool #' ~ _spool_id) }}"
+                    timestamp: "{{ now().isoformat() }}"
+      # Freeze: warn on ambiguous (>=2 AMS rows) duplicates; leave them be.
+      - repeat:
+          for_each: "{{ dup_plan | selectattr('action', 'eq', 'freeze') | list }}"
+          sequence:
+            - action: input_text.set_value
+              target:
+                entity_id: input_text.nfc_register_status
+              data:
+                value: >-
+                  ⚠ Spool {{ repeat.item.spool_id }} is registered in 2+ AMS
+                  slots at once — can't tell which is real. Reconciler is
+                  leaving it alone; re-scan the correct slot to fix.
+      # Prune the in-memory snapshots BEFORE the diff so step 7 can't re-heal a
+      # ghost: drop every duplicated spool from bb_rows; drop frozen spools from
+      # sm_rows; force each resolved spool's sm_rows entry to its keeper slot
+      # (so it lands in sm_only → the SM_ONLY heal re-asserts assign+configure).
+      - variables:
+          # Derive drop-lists INLINE from dup_plan (a prior-step var) so neither
+          # reassignment depends on the other within this block (no reliance on
+          # intra-block variable evaluation order).
+          bb_rows: >-
+            {%- set drop = dup_plan | map(attribute='spool_id') | list -%}
+            {{ bb_rows | rejectattr('spool_id', 'in', drop) | list }}
+          sm_rows: >-
+            {%- set fids = dup_plan | selectattr('action', 'eq', 'freeze') | map(attribute='spool_id') | list -%}
+            {%- set rids = dup_plan | selectattr('action', 'eq', 'resolve') | map(attribute='spool_id') | list -%}
+            {%- set kept = sm_rows | rejectattr('spool_id', 'in', fids + rids) | list -%}
+            {%- set ns = namespace(rows=kept) -%}
+            {%- for p in dup_plan if p.action == 'resolve' -%}
+              {%- set ns.rows = ns.rows + [{
+                   'key': (p.keeper_ams | string) ~ '_' ~ (p.keeper_tray | string),
+                   'ams': p.keeper_ams, 'tray': p.keeper_tray,
+                   'spool_id': p.spool_id, 'slot': p.keeper_slot}] -%}
+            {%- endfor -%}
+            {{ ns.rows }}
       # ── 6. Compute diff buckets ──
       - variables:
           # Same slot, different spool = conflict. BB-wins per O2.
@@ -3299,6 +3415,13 @@ script:
                     # → next cycle saw SM_ONLY again → infinite heal loop.
                     # v2.1 calls BOTH: assign_slot first (so BB persists),
                     # then configure_slot (so printer gets the real profile).
+                    # A1 evict-before-assign: clear any other BB rows for this
+                    # spool first so the heal can't leave a duplicate behind
+                    # (delete-by-spool removes all rows; assign re-creates one).
+                    - action: rest_command.bambuddy_unassign_spool
+                      data:
+                        spool_id: "{{ _spool_id }}"
+                      continue_on_error: true
                     - action: rest_command.bambuddy_assign_slot
                       data:
                         body: >-
@@ -3467,6 +3590,12 @@ script:
                         # _sm_spool to _bb_spool (wait — actually BB
                         # already has _bb_spool; we just need to ensure
                         # the row persists across BB's auto-eviction).
+                        # A1 evict-before-assign: clear any other BB rows for
+                        # the winning spool first (one-spool-one-slot).
+                        - action: rest_command.bambuddy_unassign_spool
+                          data:
+                            spool_id: "{{ _bb_spool }}"
+                          continue_on_error: true
                         - action: rest_command.bambuddy_assign_slot
                           data:
                             body: >-
