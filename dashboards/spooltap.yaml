@@ -1,0 +1,470 @@
+title: SpoolTap
+views:
+- title: SpoolTap
+  path: spooltap
+  icon: mdi:nfc-variant
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: SpoolTap
+      icon: mdi:nfc-variant
+      heading_style: title
+    - type: horizontal-stack
+      cards:
+      - type: custom:mushroom-template-card
+        primary: Assign
+        icon: mdi:tray-arrow-down
+        icon_color: '{{ ''amber'' if is_state(''input_select.spooltap_mode'',''Assign'') else ''disabled'' }}'
+        layout: vertical
+        tap_action:
+          action: perform-action
+          perform_action: input_select.select_option
+          target:
+            entity_id: input_select.spooltap_mode
+          data:
+            option: Assign
+        card_mod:
+          style: ha-card { border-radius:16px; {% if is_state('input_select.spooltap_mode','Assign') %} background:rgba(var(--rgb-amber),0.15); border:2px solid rgba(var(--rgb-amber),0.5); {% else %} opacity:0.45; {% endif %} }
+      - type: custom:mushroom-template-card
+        primary: Bind
+        icon: mdi:link-variant
+        icon_color: '{{ ''amber'' if is_state(''input_select.spooltap_mode'',''Bind'') else ''disabled'' }}'
+        layout: vertical
+        tap_action:
+          action: perform-action
+          perform_action: input_select.select_option
+          target:
+            entity_id: input_select.spooltap_mode
+          data:
+            option: Bind
+        card_mod:
+          style: ha-card { border-radius:16px; {% if is_state('input_select.spooltap_mode','Bind') %} background:rgba(var(--rgb-amber),0.15); border:2px solid rgba(var(--rgb-amber),0.5); {% else %} opacity:0.45; {% endif %} }
+      - type: custom:mushroom-template-card
+        primary: Modify
+        icon: mdi:pencil
+        icon_color: '{{ ''amber'' if is_state(''input_select.spooltap_mode'',''Modify'') else ''disabled'' }}'
+        layout: vertical
+        tap_action:
+          action: perform-action
+          perform_action: input_select.select_option
+          target:
+            entity_id: input_select.spooltap_mode
+          data:
+            option: Modify
+        card_mod:
+          style: ha-card { border-radius:16px; {% if is_state('input_select.spooltap_mode','Modify') %} background:rgba(var(--rgb-amber),0.15); border:2px solid rgba(var(--rgb-amber),0.5); {% else %} opacity:0.45; {% endif %} }
+      - type: custom:mushroom-template-card
+        primary: Spools
+        icon: mdi:format-list-bulleted
+        icon_color: '{{ ''amber'' if is_state(''input_select.spooltap_mode'',''Inventory'') else ''disabled'' }}'
+        layout: vertical
+        tap_action:
+          action: perform-action
+          perform_action: input_select.select_option
+          target:
+            entity_id: input_select.spooltap_mode
+          data:
+            option: Inventory
+        card_mod:
+          style: ha-card { border-radius:16px; {% if is_state('input_select.spooltap_mode','Inventory') %} background:rgba(var(--rgb-amber),0.15); border:2px solid rgba(var(--rgb-amber),0.5); {% else %} opacity:0.45; {% endif %} }
+  - type: grid
+    cards:
+    - type: custom:mushroom-template-card
+      primary: '{{ states(''sensor.nfc_assign_result'') }}'
+      secondary: '{{ states(''input_text.nfc_register_status'') }}'
+      icon: '{{ {''Working'':''mdi:progress-clock'',''Awaiting Spool Scan'':''mdi:nfc-search-variant'',''Success'':''mdi:check-circle'',''Failed'':''mdi:alert-circle'',''Cancelled'':''mdi:cancel''}.get(states(''sensor.nfc_assign_result''),''mdi:nfc-variant'') }}'
+      icon_color: '{{ {''Working'':''blue'',''Awaiting Spool Scan'':''amber'',''Success'':''green'',''Failed'':''red'',''Cancelled'':''orange''}.get(states(''sensor.nfc_assign_result''),''grey'') }}'
+      multiline_secondary: true
+      fill_container: true
+    - type: custom:mushroom-template-card
+      primary: '{% set n = states(''sensor.nfc_scanned_tag_name'') %}{{ (''Tag in hand: '' ~ n) if n not in [''(none)'',''unknown'',''unavailable''] else ''No tag scanned'' }}'
+      secondary: '{% set r = state_attr(''sensor.nfc_scanned_tag_name'',''role'') %}{% if r == ''slot'' %}AMS slot {{ state_attr(''sensor.nfc_scanned_tag_name'',''slot'') }}{% elif r == ''spool'' %}spool #{{ state_attr(''sensor.nfc_scanned_tag_name'',''spool_id'') }}{% elif r == ''unbound'' %}unbound — ready to bind{% elif r == ''unregistered'' %}unregistered tag{% else %}scan an NFC tag with your phone{% endif %}'
+      icon: mdi:nfc-tap
+      icon_color: '{% set r = state_attr(''sensor.nfc_scanned_tag_name'',''role'') %}{{ {''slot'':''blue'',''spool'':''green'',''unbound'':''amber'',''unregistered'':''red''}.get(r,''grey'') }}'
+    - type: custom:mushroom-chips-card
+      alignment: center
+      chips:
+      - type: template
+        icon: mdi:printer-3d
+        content: '{{ states(states(''input_text.spooltap_print_status_sensor'')) | title }}'
+  - type: grid
+    visibility:
+    - condition: state
+      entity: input_select.spooltap_mode
+      state: Assign
+    cards:
+    - type: heading
+      heading: Assign — scan slot, then spool
+      icon: mdi:tray-arrow-down
+      heading_style: title
+    - type: markdown
+      visibility:
+      - condition: state
+        entity: input_boolean.nfc_register_mode
+        state: 'on'
+      content: ⚠️ **Registration Mode is ON** — scans will *bind*, not assign. Turn it off in the **Bind** tab before assigning. (It now auto-clears when you leave Bind.)
+    - type: markdown
+      content: '**1.** Scan a **slot** tag (status → *Awaiting Spool Scan*).  **2.** Scan the **spool** tag — records sync, profile pushes, verified ✓/⚠.  Stuck? **Cancel**, then re-scan both.'
+    - type: tile
+      entity: input_text.nfc_pending_slot
+      name: Pending AMS Slot
+      icon: mdi:tray-alert
+    - type: tile
+      entity: script.nfc_cancel_assignment
+      name: Cancel Assignment
+      icon: mdi:cancel
+      color: red
+      tap_action:
+        action: perform-action
+        perform_action: script.turn_on
+        target:
+          entity_id: script.nfc_cancel_assignment
+  - type: grid
+    visibility:
+    - condition: state
+      entity: input_select.spooltap_mode
+      state: Bind
+    cards:
+    - type: heading
+      heading: Bind — tag to spool
+      icon: mdi:link-variant
+      heading_style: title
+    - type: tile
+      entity: input_boolean.nfc_register_mode
+      name: Bind Mode
+      icon: mdi:nfc-tap
+    - type: markdown
+      visibility:
+      - condition: state
+        entity: input_boolean.nfc_register_mode
+        state: 'off'
+      content: Turn **Registration Mode ON**, then scan the tag you want to bind (it shows up top as *Tag in hand*).
+    - type: heading
+      heading: Filter
+      heading_style: subtitle
+      icon: mdi:filter-variant
+    - type: horizontal-stack
+      cards:
+      - type: tile
+        entity: input_select.nfc_pool_mode
+        name: Pool filter (tap to cycle)
+        icon: mdi:filter-variant
+        tap_action:
+          action: perform-action
+          perform_action: input_select.select_next
+          target:
+            entity_id: input_select.nfc_pool_mode
+          data:
+            cycle: true
+      - type: tile
+        entity: script.nfc_clear_spool_filters
+        name: Clear filters
+        icon: mdi:filter-remove
+        tap_action:
+          action: perform-action
+          perform_action: script.turn_on
+          target:
+            entity_id: script.nfc_clear_spool_filters
+    - type: tile
+      entity: input_select.nfc_filter_brand
+      name: Brand filter
+      icon: mdi:factory
+      features:
+      - type: select-options
+    - type: tile
+      entity: input_select.nfc_filter_type
+      name: Type filter
+      icon: mdi:texture
+      features:
+      - type: select-options
+    - type: heading
+      heading: Pick spool
+      heading_style: subtitle
+      icon: mdi:cursor-default-click
+    - type: tile
+      entity: input_select.nfc_spool_pick
+      name: Spool Picker
+      icon: mdi:format-list-bulleted
+      features:
+      - type: select-options
+      card_mod:
+        style: 'ha-card { border-left: 4px solid var(--primary-color); }'
+    - type: tile
+      entity: script.nfc_bind_spool_from_pick
+      name: Bind Tag to Spool
+      icon: mdi:link-variant-plus
+      color: green
+      tap_action:
+        action: perform-action
+        perform_action: script.turn_on
+        target:
+          entity_id: script.nfc_bind_spool_from_pick
+    - type: heading
+      heading: Bind to AMS Slot
+      heading_style: subtitle
+      icon: mdi:tray-arrow-down
+    - type: tile
+      entity: input_select.nfc_slot_select
+      name: AMS Slot
+      icon: mdi:tray-arrow-down
+      features:
+      - type: select-options
+      card_mod:
+        style: 'ha-card { border-left: 4px solid var(--primary-color); }'
+    - type: tile
+      entity: script.nfc_bind_slot
+      name: Bind Tag to Slot
+      icon: mdi:tray-plus
+      tap_action:
+        action: perform-action
+        perform_action: script.turn_on
+        target:
+          entity_id: script.nfc_bind_slot
+    - type: heading
+      heading: Manual (advanced)
+      heading_style: subtitle
+      icon: mdi:wrench
+    - type: tile
+      entity: input_number.nfc_target_spool_id
+      name: 'Bind: Target Spool ID'
+      icon: mdi:numeric
+      features:
+      - type: numeric-input
+        style: buttons
+    - type: tile
+      entity: script.nfc_bind_spool
+      name: Bind Tag to Spool (by ID)
+      icon: mdi:link-variant
+      tap_action:
+        action: perform-action
+        perform_action: script.turn_on
+        target:
+          entity_id: script.nfc_bind_spool
+  - type: grid
+    visibility:
+    - condition: state
+      entity: input_select.spooltap_mode
+      state: Modify
+    cards:
+    - type: heading
+      heading: Modify — load a spool
+      icon: mdi:pencil-box-outline
+      heading_style: title
+    - type: markdown
+      content: "{% set s = 'sensor.nfc_modify_loaded_spool' %}{% set loaded = state_attr(s, 'loaded') %}{% if loaded %}{% set sid = state_attr(s, 'spool_id') | default('') %}{% set name = state_attr(s, 'name') | default('') %}{% set mat = state_attr(s, 'material') | default('') %}{% set rem = state_attr(s, 'remaining') | float(0) | round(0) | int %}{% set tare = state_attr(s, 'tare') | float(0) | round(0) | int %}{% set gross = rem + tare %}{% set tag_name = states('sensor.nfc_scanned_tag_name') %}**Spool #{{ sid }}** — {{ name }}{% if mat and mat != '' %} / {{ mat }}{% endif %}  \nRemaining **{{ rem }}g** of {{ gross }}g{% if tag_name not in ['(none)','unknown','unavailable',''] %} / Tag: **{{ tag_name }}**{% endif %}{% else %}*No Spool loaded — scan a Tag or pick from the picker below.*{% endif %}"
+    - type: markdown
+      content: Scan a spool tag (no slot pending), or use the pickers below. The Edit panel appears once a spool loads.
+    - type: heading
+      heading: Filter
+      heading_style: subtitle
+      icon: mdi:filter-variant
+    - type: tile
+      entity: input_select.nfc_mod_filter_brand
+      name: Brand filter
+      features:
+      - type: select-options
+      tap_action:
+        action: none
+    - type: tile
+      entity: input_select.nfc_mod_filter_type
+      name: Type filter
+      features:
+      - type: select-options
+      tap_action:
+        action: none
+    - type: tile
+      entity: script.nfc_clear_modify_filters
+      name: Refresh Pickers
+      icon: mdi:refresh
+      color: blue
+      tap_action:
+        action: perform-action
+        perform_action: script.turn_on
+        target:
+          entity_id: script.nfc_clear_modify_filters
+    - type: heading
+      heading: Pick spool (loads on select)
+      heading_style: subtitle
+      icon: mdi:cursor-default-click
+    - type: tile
+      entity: input_select.nfc_mod_tag
+      name: Open by Tag
+      icon: mdi:tag-search
+      features:
+      - type: select-options
+      card_mod:
+        style: 'ha-card { border-left: 4px solid var(--primary-color); }'
+      tap_action:
+        action: none
+    - type: tile
+      entity: input_select.nfc_mod_spool_pick
+      name: Open by Spool
+      icon: mdi:format-list-bulleted
+      features:
+      - type: select-options
+      card_mod:
+        style: 'ha-card { border-left: 4px solid var(--primary-color); }'
+      tap_action:
+        action: none
+  - type: grid
+    visibility:
+    - condition: state
+      entity: input_select.spooltap_mode
+      state: Modify
+    - condition: numeric_state
+      entity: input_number.nfc_weight_spool_id
+      above: 0
+    cards:
+    - type: heading
+      heading: Edit loaded spool
+      icon: mdi:pencil
+      heading_style: subtitle
+    - type: entities
+      entities:
+      - entity: input_text.nfc_mod_name
+        name: Filament Name
+      - entity: input_select.nfc_mod_material
+        name: Material (Unknown = leave unchanged)
+      - entity: input_number.nfc_weight_edit
+        name: Remaining net (g)
+      - entity: input_number.nfc_mod_gross
+        name: Gross (incl. empty spool, g)
+    - type: conditional
+      conditions:
+      - condition: state
+        entity: binary_sensor.nfc_modify_dirty
+        state: 'on'
+      card:
+        type: custom:mushroom-chips-card
+        alignment: start
+        chips:
+        - type: template
+          icon: mdi:pencil-circle
+          icon_color: amber
+          content: Unsaved changes
+    - type: tile
+      entity: script.nfc_modify_commit
+      name: Save
+      icon: mdi:content-save
+      color: green
+      tap_action:
+        action: perform-action
+        perform_action: script.turn_on
+        target:
+          entity_id: script.nfc_modify_commit
+      card_mod:
+        style: 'ha-card { {% if is_state(''binary_sensor.nfc_modify_dirty'',''on'') %}background: rgba(var(--rgb-green), 0.15); border: 2px solid rgba(var(--rgb-green), 0.6); {% endif %}}'
+    - type: tile
+      entity: script.nfc_archive_spool
+      name: Archive Spool
+      icon: mdi:archive-arrow-down
+      color: red
+      tap_action:
+        action: perform-action
+        perform_action: script.turn_on
+        target:
+          entity_id: script.nfc_archive_spool
+        confirmation:
+          text: Archive this spool in Spoolman? Its NFC tag becomes free to recycle.
+    - type: tile
+      entity: script.nfc_unload_modify
+      name: Close panel
+      icon: mdi:close-circle-outline
+      tap_action:
+        action: perform-action
+        perform_action: script.turn_on
+        target:
+          entity_id: script.nfc_unload_modify
+  - type: grid
+    visibility:
+    - condition: state
+      entity: input_select.spooltap_mode
+      state: Inventory
+    cards:
+    - type: heading
+      heading: Spool Inventory
+      icon: mdi:format-list-bulleted
+      heading_style: title
+    - type: heading
+      heading: BB Reconciler
+      heading_style: subtitle
+      icon: mdi:sync-circle
+    - type: tile
+      entity: input_button.nfc_reconcile_now
+      name: Reconcile Now
+      icon: mdi:sync
+      color: indigo
+      tap_action:
+        action: perform-action
+        perform_action: input_button.press
+        target:
+          entity_id: input_button.nfc_reconcile_now
+    - type: tile
+      entity: input_boolean.bb_reconciler_enabled
+      name: Auto-Heal
+      icon: mdi:sync-circle
+      color: green
+    - type: tile
+      entity: input_boolean.nfc_notify_reconcile
+      name: 'Notify: BB Reconciler auto-heals'
+      icon: mdi:auto-fix
+      color: amber
+    - type: heading
+      heading: Configuration
+      heading_style: subtitle
+      icon: mdi:cog
+    - type: tile
+      entity: script.spooltap_apply_config
+      name: Apply Config
+      icon: mdi:cog-sync
+      color: blue
+      tap_action:
+        action: perform-action
+        perform_action: script.spooltap_apply_config
+        target:
+          entity_id: script.spooltap_apply_config
+    - type: markdown
+      content: Re-seeds SpoolTap from your `secrets.yaml`. Run this once after first install, and again any time you edit `secrets.yaml` (reload YAML or restart first so `!secret` re-resolves).
+    - type: markdown
+      title: Recent Heals
+      content: |-
+        {%- set rows = state_attr('sensor.nfc_recent_heals', 'recent') | default([], true) -%}
+        {%- if rows | length == 0 -%}
+        **Recent Heals** — _BB Reconciler last 10 auto-corrections_
+
+        No recent heals — Bambuddy and Spoolman are in sync.
+        {%- else -%}
+        **Recent Heals** — _BB Reconciler last 10 auto-corrections_
+
+        | Time | Slot | Spool |
+        |---|---|---|
+        {%- for h in rows[:10] -%}
+        {%- set raw = h.slot | default('') -%}
+        {%- set slot_disp = 'External' if raw == 'external' else ('AMS ' ~ (raw | replace('_', ' ') | title)) -%}
+        | {{ (h.timestamp | as_datetime | as_local).strftime('%H:%M') }} | {{ slot_disp }} | Spool #{{ h.spool_id }} ({{ h.spool_name }}) |
+        {%- endfor -%}
+        {%- endif -%}
+    - type: custom:auto-entities
+      card:
+        type: grid
+        columns: 2
+        square: false
+      card_param: cards
+      sort:
+        method: friendly_name
+      filter:
+        include:
+        - entity_id: sensor.spoolman_spool_*
+          attributes:
+            device_class: weight
+            archived: false
+      options:
+        type: custom:mushroom-entity-card
+        use_entity_picture: true
+        primary_info: name
+        secondary_info: state
+        tap_action:
+          action: more-info

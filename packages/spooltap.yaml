@@ -325,6 +325,22 @@ input_text:
   nfc_slot_external: { name: External Slot Tag, max: 255, icon: mdi:tray-arrow-up }
 
 input_select:
+  # --- Dashboard mode switcher ----------------------------------------
+  # Drives the SpoolTap dashboard's Assign / Bind / Modify / Inventory
+  # tabs (section visibility keys off this state). The dashboard's mode
+  # buttons set it via input_select.select_option; automation
+  # nfc_regmode_autooff_leaving_bind turns Registration Mode off whenever
+  # the mode leaves "Bind". Defined here (not as a UI helper) so a fresh
+  # install gets it automatically.
+  spooltap_mode:
+    name: SpoolTap Mode
+    icon: mdi:nfc-variant
+    options:
+      - Assign
+      - Bind
+      - Modify
+      - Inventory
+
   nfc_slot_select:
     name: AMS Slot to Bind
     icon: mdi:tray-arrow-down

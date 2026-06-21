@@ -75,10 +75,22 @@ no guessing, no silent wrong answers.
   with copy-paste candidates, never a silent guess that ends up on your
   printer forever.
 
+## What's in this repo
+
+- [`packages/spooltap.yaml`](packages/) — the whole system (helpers, scripts,
+  automations, template sensors). Parameterized: reads every install value from
+  your `secrets.yaml`.
+- [`dashboards/spooltap.yaml`](dashboards/) — the control surface (Assign /
+  Bind / Modify / Inventory). Part of SpoolTap, not optional.
+- [`secrets.example.yaml`](secrets.example.yaml) — copy to `secrets.yaml`, fill
+  in your nine values.
+
 ## Documentation
 
 - [SETUP.md](SETUP.md) — prerequisites, installation, and the `secrets.yaml`
   values for your own install.
+- [dashboards/README.md](dashboards/README.md) — installing the dashboard and
+  its HACS card prerequisites.
 - `NFC_FILAMENT_WORKFLOW.md` — the user manual (registration runbook,
   day-to-day flows, inventory workbench, Profile Sync). *Coming soon.*
 - `FILAMENT_SYSTEM_ARCHITECTURE.md` — internals: every component, every
