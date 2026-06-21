@@ -29,7 +29,7 @@ then automatically:
 - **Keeps Spoolman's records straight** — which spool is in which slot,
   with stale claims cleaned up automatically.
 - **Verifies and reports honestly** — every printer push is read back and
-  retried; a dashboard chip shows Working → Awaiting Spool Scan →
+  retried; a dashboard chip shows Working → Awaiting Spool Tag →
   Success ✓ / Failed ⚠, and your phone gets a notification you can
   trust. A Cancel button bails out of anything, any time.
 

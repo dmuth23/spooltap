@@ -136,8 +136,10 @@ Profiles the printer has seen before need nothing, ever again.
 
 ## Daily reference
 
-The full user manual (`NFC_FILAMENT_WORKFLOW.md`) — day-to-day flows, the
-Modify Spool inventory workbench, Profile Sync, notification toggles, the
+Each dashboard tab carries inline hint cards (what to scan, what each
+status means), so you can operate SpoolTap day-to-day from the dashboard
+alone. The full written manual (`NFC_FILAMENT_WORKFLOW.md`) — the Modify
+Spool inventory workbench, Profile Sync nuances, notification toggles, the
 Cancel button, and every status message explained — is being prepared and
 will land in this repo.
 
@@ -146,7 +148,8 @@ will land in this repo.
 | Symptom | Cause / fix |
 |---|---|
 | Chip says ⚠ "printer did NOT confirm" | AMS was busy or tray empty — re-scan the pair once settled (it's idempotent) |
-| Tray tile looks right but tap-in says empty / slicer doesn't list it | The profile code didn't stick → the printer doesn't know that profile yet (Part 4's learn step) |
+| Tray tile looks right but tap-in says empty / slicer doesn't list it | The profile code didn't stick → the printer doesn't know that profile yet (Part 5's learn step) |
 | Status says GENERIC fallback | Filament has no mapped profile — run Profile Sync, check the card |
 | A scan does nothing | Same tag scanned twice in a row — tap Cancel Assignment, scan again |
 | New spool not recognized after binding | Wait ~15 s (sensor poll) or run Profile Sync (materializes new spools) |
+| Inventory spool grid is empty | The Spoolman **HA integration** isn't set up, or its `sensor.spoolman_spool_*` entities are named differently on your install — confirm the integration is added and those sensors exist (Dev Tools → States). The grid and tag-scan resolution rely on the Spoolman integration's current entity/attribute schema |

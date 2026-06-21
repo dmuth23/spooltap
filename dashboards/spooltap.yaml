@@ -75,8 +75,8 @@ views:
     - type: custom:mushroom-template-card
       primary: '{{ states(''sensor.nfc_assign_result'') }}'
       secondary: '{{ states(''input_text.nfc_register_status'') }}'
-      icon: '{{ {''Working'':''mdi:progress-clock'',''Awaiting Spool Scan'':''mdi:nfc-search-variant'',''Success'':''mdi:check-circle'',''Failed'':''mdi:alert-circle'',''Cancelled'':''mdi:cancel''}.get(states(''sensor.nfc_assign_result''),''mdi:nfc-variant'') }}'
-      icon_color: '{{ {''Working'':''blue'',''Awaiting Spool Scan'':''amber'',''Success'':''green'',''Failed'':''red'',''Cancelled'':''orange''}.get(states(''sensor.nfc_assign_result''),''grey'') }}'
+      icon: '{{ {''Working'':''mdi:progress-clock'',''Awaiting Spool Tag'':''mdi:nfc-search-variant'',''Success'':''mdi:check-circle'',''Failed'':''mdi:alert-circle'',''Cancelled'':''mdi:cancel''}.get(states(''sensor.nfc_assign_result''),''mdi:nfc-variant'') }}'
+      icon_color: '{{ {''Working'':''blue'',''Awaiting Spool Tag'':''amber'',''Success'':''green'',''Failed'':''red'',''Cancelled'':''orange''}.get(states(''sensor.nfc_assign_result''),''grey'') }}'
       multiline_secondary: true
       fill_container: true
     - type: custom:mushroom-template-card
@@ -107,7 +107,7 @@ views:
         state: 'on'
       content: ⚠️ **Registration Mode is ON** — scans will *bind*, not assign. Turn it off in the **Bind** tab before assigning. (It now auto-clears when you leave Bind.)
     - type: markdown
-      content: '**1.** Scan a **slot** tag (status → *Awaiting Spool Scan*).  **2.** Scan the **spool** tag — records sync, profile pushes, verified ✓/⚠.  Stuck? **Cancel**, then re-scan both.'
+      content: '**1.** Scan a **slot** tag (status → *Awaiting Spool Tag*).  **2.** Scan the **spool** tag — records sync, profile pushes, verified ✓/⚠.  Stuck? **Cancel**, then re-scan both.'
     - type: tile
       entity: input_text.nfc_pending_slot
       name: Pending AMS Slot
