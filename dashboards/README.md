@@ -106,9 +106,9 @@ If you'd rather not edit `configuration.yaml`:
 1. **Settings → Dashboards → Add Dashboard → New dashboard from scratch.** Give
    it a title and icon.
 2. Open it, then **⋮ → Edit Dashboard → ⋮ → Raw configuration editor.**
-3. Paste the contents of `spooltap.yaml` **starting from the `views:` key**
-   (a storage dashboard's raw config is just the `title:`/`views:` body), and
-   **Save.**
+3. Paste the contents of `spooltap.yaml` and **Save.** (You can keep or drop the
+   top-level `title:` line — you already named the dashboard in step 1; the
+   `views:` block is what matters.)
 
 Because this is a storage-mode dashboard, the HACS resources auto-load. The
 trade-off: updates mean re-pasting, and it isn't a file you version-control.

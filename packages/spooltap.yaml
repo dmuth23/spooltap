@@ -481,8 +481,8 @@ input_number:
 
   # Per-material nozzle temp defaults, used by nfc_assign_spool_to_tray when
   # a spool's Spoolman record has no settings_extruder_temp set. Seeded from
-  # Bambu's "Generic <material>" filament catalog ranges. Editable from the
-  # NFC Tags dashboard as new materials enter the inventory.
+  # Bambu's "Generic <material>" filament catalog ranges. Editable as new
+  # materials enter the inventory.
   nfc_temp_min_pla: { name: "NFC Temp Min (PLA)", icon: mdi:thermometer-low, min: 160, max: 300, step: 1, mode: box, unit_of_measurement: "°C", initial: 190 }
   nfc_temp_max_pla: { name: "NFC Temp Max (PLA)", icon: mdi:thermometer-high, min: 160, max: 300, step: 1, mode: box, unit_of_measurement: "°C", initial: 240 }
   nfc_temp_min_pla_plus: { name: "NFC Temp Min (PLA+)", icon: mdi:thermometer-low, min: 160, max: 300, step: 1, mode: box, unit_of_measurement: "°C", initial: 190 }
@@ -539,7 +539,7 @@ template:
   # (the ✓/⚠ markers written by the push read-back), Cancelled after
   # nfc_cancel_assignment, Idle otherwise.
   - sensor:
-      - name: NFC Status Chip
+      - name: NFC Assign Result   # entity_id = slugify(name); MUST match unique_id for the dashboard chip
         unique_id: nfc_assign_result
         icon: >-
           {{ {'Working': 'mdi:progress-clock',
@@ -575,7 +575,7 @@ template:
       - trigger: event
         event_type: nfc_profile_sync_report
     sensor:
-      - name: NFC Filament Profile Sync Report
+      - name: NFC Profile Sync Report   # entity_id = slugify(name); MUST match unique_id (dashboard reads it)
         unique_id: nfc_profile_sync_report
         icon: >-
           {{ 'mdi:cloud-check' if (trigger.event.data.unmatched | length) == 0 else 'mdi:cloud-question' }}
@@ -601,7 +601,7 @@ template:
       - trigger: event
         event_type: nfc_reconciler_heal
     sensor:
-      - name: Reconciler Heals
+      - name: NFC Recent Heals   # entity_id = slugify(name); MUST match unique_id (dashboard heal log reads it)
         unique_id: nfc_recent_heals
         icon: mdi:auto-fix
         state: >-
@@ -630,7 +630,7 @@ template:
   - sensor:
       # Resolves the last-scanned tag to a Spoolman spool id by searching all
       # extra_nfc_tag sensors. State = spool id (e.g. "13"), or "" if no match.
-      - name: NFC Scanned Spool (id)
+      - name: NFC Scanned Spool   # entity_id = slugify(name); keep aligned with unique_id
         unique_id: nfc_scanned_spool
         icon: mdi:magnify
         state: >
@@ -2487,9 +2487,8 @@ script:
                 no dedicated temperature defaults yet. Used the generic safe
                 range ({{ nozzle_temp_min }}-{{ nozzle_temp_max }}°C). Add
                 input_number.nfc_temp_min_{{ slug }} and
-                input_number.nfc_temp_max_{{ slug }} to
-                packages/filament_nfc.yaml (and the NFC Tags dashboard) to set
-                proper defaults for "{{ material }}".
+                input_number.nfc_temp_max_{{ slug }} to the SpoolTap package to
+                set proper defaults for "{{ material }}".
       - action: input_text.set_value
         target:
           entity_id: input_text.nfc_register_status
@@ -2849,8 +2848,9 @@ script:
               message: >-
                 No cloud filament profile matched:
                 {{ result.unmatched | map(attribute='label') | join('; ') }}.
-                See the Profile Sync card on the NFC Tags view for copyable
-                candidate codes, or create a profile in Bambu Studio (NOTE:
+                See the Profile Sync card on the SpoolTap dashboard (Inventory
+                tab) for copyable candidate codes, or create a profile in Bambu
+                Studio (NOTE:
                 the printer must learn a NEW profile once — briefly connect
                 it to the cloud, or assign the profile to any tray from the
                 slicer while connected).

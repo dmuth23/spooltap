@@ -447,6 +447,40 @@ views:
         | {{ (h.timestamp | as_datetime | as_local).strftime('%H:%M') }} | {{ slot_disp }} | Spool #{{ h.spool_id }} ({{ h.spool_name }}) |
         {%- endfor -%}
         {%- endif -%}
+    - type: heading
+      heading: Profile Sync
+      heading_style: subtitle
+      icon: mdi:cloud-sync
+    - type: tile
+      entity: script.nfc_sync_filament_profiles
+      name: Sync Filament Profiles
+      icon: mdi:cloud-sync
+      color: blue
+      tap_action:
+        action: perform-action
+        perform_action: script.turn_on
+        target:
+          entity_id: script.nfc_sync_filament_profiles
+      vertical: false
+    - type: markdown
+      title: Profile Sync
+      content: |-
+        {% set r = states('sensor.nfc_profile_sync_report') %}
+        {% set u = state_attr('sensor.nfc_profile_sync_report', 'unmatched') or [] %}
+        {% set ls = state_attr('sensor.nfc_profile_sync_report', 'last_sync') %}
+        {% if r in ['unknown', 'unavailable'] %}
+        _No sync run yet — tap **Sync Filament Profiles** above._
+        {% elif u | count == 0 %}
+        ✅ **All filaments mapped.** Last sync: {{ relative_time(ls | as_datetime) }} ago ({{ state_attr('sensor.nfc_profile_sync_report', 'mapped') }} mapped, {{ state_attr('sensor.nfc_profile_sync_report', 'sid_filled') }} setting_ids filled).
+        {% else %}
+        ⚠ **{{ u | count }} filament(s) need a profile** (last sync {{ relative_time(ls | as_datetime) }} ago):
+        {% for f in u %}
+        **#{{ f.id }} — {{ f.label }}**
+        {% if f.candidates | count %}{% for c in f.candidates %}- `{{ c.code }}` — {{ c.name }}
+        {% endfor %}{% else %}- _no same-vendor profiles in your cloud library — create one in Bambu Studio_
+        {% endif %}{% endfor %}
+        _Copy a code → Spoolman → that filament → **NFC Tray Idx** → tap Sync again (the setting_id fills itself). Brand-new profile? The printer must learn it once: briefly cloud-connect it, or assign the profile to a tray from the slicer._
+        {% endif %}
     - type: custom:auto-entities
       card:
         type: grid
