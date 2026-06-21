@@ -59,6 +59,12 @@ however long it takes to sticker your spool collection.
 > ones. **Critical:** the names there must match `spooltap_ams_prefix` exactly
 > (the part before `left_tray_1`) — a mismatch silently breaks empty-slot
 > assignment. Running a single AMS? Also delete the `right_*` lines there.
+>
+> These lines assume ha-bambulab exposes your trays as
+> `<prefix>left_tray_1…4` / `right_tray_1…4` (the convention on the tested
+> setup). If your AMS model names them differently, just match the literal
+> sensor names you actually see in **Developer Tools → States** — the
+> `*_tray_*` part is yours to set here, not only the prefix.
 
 ## Part 2 — Install the dashboard
 
