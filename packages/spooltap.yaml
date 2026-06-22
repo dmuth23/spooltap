@@ -162,37 +162,50 @@ input_boolean:
     icon: mdi:nfc-tap
 
   # Per-category gates for the phone notifications pushed by
-  # automation nfc_status_notify ("Notifications" dashboard view).
-  # No `initial:` on purpose — state restores across restarts so user
-  # choices stick. NOTE: they therefore start OFF when first created;
-  # flip on the desired ones once after deploy.
+  # automation nfc_status_notify (see the "Notifications" dashboard view).
+  # initial: true → a fresh install notifies out-of-box, so you discover the
+  # categories exist and don't silently miss errors; mute the noisy ones from
+  # the Notifications view.
+  # CAVEAT: `initial:` re-applies on every HA restart, so a muted category
+  # returns to ON after a restart. If you want your mutes to persist, delete
+  # the `initial: true` lines below (they'll then start OFF on first run and
+  # you enable the ones you want once).
   nfc_notify_scan:
     name: "Notify: Tag scanned (Bind Mode)"
     icon: mdi:nfc-search-variant
+    initial: true
   nfc_notify_bind:
     name: "Notify: Tag bound (Spool/Slot)"
     icon: mdi:link-variant
+    initial: true
   nfc_notify_slot_prompt:
     name: "Notify: Slot Tag scanned (Assign prompt)"
     icon: mdi:tray-alert
+    initial: true
   nfc_notify_assign:
     name: "Notify: Spool assigned to Slot"
     icon: mdi:tray-arrow-down
+    initial: true
   nfc_notify_weight:
     name: "Notify: Spool weight (from scan)"
     icon: mdi:scale
+    initial: true
   nfc_notify_error:
     name: "Notify: Errors & refusals"
     icon: mdi:alert-circle
+    initial: true
   nfc_notify_timeout:
     name: "Notify: Pending Scan timeout"
     icon: mdi:timer-off
+    initial: true
   nfc_notify_other:
     name: "Notify: Everything else (system messages)"
     icon: mdi:message-cog
+    initial: true
   nfc_notify_modify:
     name: "Notify: Modify Spool actions"
     icon: mdi:pencil
+    initial: true
 
   # ── Layer 2: BB ↔ Spoolman reconciler ────────────────────────
   # Master kill switch. The poll/event/startup automations gate on

@@ -502,3 +502,66 @@ views:
         secondary_info: state
         tap_action:
           action: more-info
+- title: Notifications
+  path: spooltap-notifications
+  icon: mdi:bell-cog
+  type: sections
+  max_columns: 2
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: Filament NFC Notifications
+      heading_style: title
+      icon: mdi:bell-cog
+    - type: markdown
+      content: >-
+        Per-category gates for the phone notifications. The Status header always
+        shows every message regardless — these switches only control what reaches
+        your phone. Your phone's own notification-channel settings layer global
+        sound/mute on top.
+    - type: tile
+      entity: input_boolean.nfc_notify_scan
+      name: Tag scanned (Bind Mode)
+      tap_action:
+        action: toggle
+    - type: tile
+      entity: input_boolean.nfc_notify_bind
+      name: Tag bound (Spool/Slot)
+      tap_action:
+        action: toggle
+    - type: tile
+      entity: input_boolean.nfc_notify_slot_prompt
+      name: Slot Tag scanned (Assign prompt)
+      tap_action:
+        action: toggle
+    - type: tile
+      entity: input_boolean.nfc_notify_assign
+      name: Spool assigned to Slot
+      tap_action:
+        action: toggle
+    - type: tile
+      entity: input_boolean.nfc_notify_weight
+      name: Spool weight (from scan)
+      tap_action:
+        action: toggle
+    - type: tile
+      entity: input_boolean.nfc_notify_error
+      name: Errors & refusals
+      tap_action:
+        action: toggle
+    - type: tile
+      entity: input_boolean.nfc_notify_timeout
+      name: Pending Scan timeout
+      tap_action:
+        action: toggle
+    - type: tile
+      entity: input_boolean.nfc_notify_other
+      name: Everything else
+      tap_action:
+        action: toggle
+    - type: tile
+      entity: input_boolean.nfc_notify_modify
+      name: Modify panel actions
+      tap_action:
+        action: toggle

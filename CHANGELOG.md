@@ -19,6 +19,13 @@ All notable changes to SpoolTap are recorded here.
   else. Includes an Apply Config button on the Inventory tab.
 - `dashboards/README.md` — dashboard install (YAML-mode + paste alternative),
   HACS card prerequisites, and the storage-vs-full-YAML resource rules.
+- `dashboards/spooltap.yaml` — a **Notifications** view: per-category toggle
+  tiles for the phone-notification gates (`nfc_notify_*`), so categories can be
+  muted/unmuted from the dashboard instead of digging through Settings → Helpers.
+- The `nfc_notify_*` categories now default **on** (`initial: true`) so a fresh
+  install notifies out-of-box and the categories are discoverable. Caveat:
+  `initial:` re-applies on every HA restart, so a muted category returns to on
+  after a restart — delete the `initial: true` lines if you want mutes to persist.
 
 ### Fixed
 - Reconciler one-spool-two-slots oscillation. If a spool was registered in two
