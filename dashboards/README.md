@@ -1,7 +1,8 @@
 # dashboards/
 
 `spooltap.yaml` is the complete SpoolTap control surface — the Assign / Bind /
-Modify / Inventory workbench. It is **part of SpoolTap, not an optional extra**:
+Modify / Inventory workbench, plus a Notifications tab for muting/unmuting the
+phone-alert categories. It is **part of SpoolTap, not an optional extra**:
 the package and the dashboard are designed together.
 
 The file is fully parameterized. The only install-specific value it ever

@@ -6,8 +6,9 @@ SpoolTap is a phone-NFC filament tracking system for Bambu Lab printers,
 built entirely on Home Assistant + [Spoolman](https://github.com/Donkie/Spoolman)
 + [Bambuddy](https://bambuddy.dev) + the
 [ha-bambulab](https://github.com/greghesp/ha-bambulab) integration. No
-custom hardware, no NFC reader — your phone and a pack of NTAG215 stickers
-are the entire input device.
+custom hardware, no NFC reader — your Android phone and a pack of NTAG215
+stickers are the entire input device. (Android is the tested path; iOS
+background NFC is more restrictive — see SETUP.md.)
 
 ## What it does
 
@@ -81,7 +82,8 @@ no guessing, no silent wrong answers.
   automations, template sensors). Parameterized: reads every install value from
   your `secrets.yaml`.
 - [`dashboards/spooltap.yaml`](dashboards/) — the control surface (Assign /
-  Bind / Modify / Inventory). Part of SpoolTap, not optional.
+  Bind / Modify / Inventory) plus a Notifications tab for the phone-alert
+  category toggles. Part of SpoolTap, not optional.
 - [`secrets.example.yaml`](secrets.example.yaml) — copy to `secrets.yaml`, fill
   in your nine values.
 
@@ -91,11 +93,6 @@ no guessing, no silent wrong answers.
   values for your own install.
 - [dashboards/README.md](dashboards/README.md) — installing the dashboard and
   its HACS card prerequisites.
-- `NFC_FILAMENT_WORKFLOW.md` — the user manual (registration runbook,
-  day-to-day flows, inventory workbench, Profile Sync). *Coming soon.*
-- `FILAMENT_SYSTEM_ARCHITECTURE.md` — internals: every component, every
-  data flow, and a decision log of everything that bit us so it doesn't
-  bite you. *Coming soon.*
 
 ## Credit
 

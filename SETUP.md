@@ -47,9 +47,15 @@ however long it takes to sticker your spool collection.
    Actions → `script.spooltap_apply_config`** if you haven't installed the
    dashboard yet.
 
-> All of SpoolTap's on/off toggles (Registration Mode, the BB Reconciler
-> auto-heal, the notification switches) ship **OFF** — that's the intended
-> resting state. Turn Registration Mode on only while binding tags.
+> **Default toggle states.** Registration Mode and the BB Reconciler auto-heal
+> ship **OFF** — turn Registration Mode on only while binding tags, and flip the
+> Reconciler on once you trust the system. The phone-notification categories
+> ship **ON**, so a fresh install notifies out-of-box and you actually discover
+> them; mute any you don't want on the dashboard's **Notifications** tab. (The
+> reconciler-status notification is the one exception — it ships OFF.) Heads-up:
+> `initial: true` re-applies on every HA restart, so a muted category returns to
+> on after a restart — delete that category's `initial: true` line in the
+> package if you want a mute to persist.
 
 > **AMS topology (one hand-edit needed).** SpoolTap ships configured for a
 > dual-AMS layout (`left_1…left_4`, `right_1…right_4`, plus `external`). Two
@@ -69,7 +75,8 @@ however long it takes to sticker your spool collection.
 ## Part 2 — Install the dashboard
 
 The dashboard is the SpoolTap control surface (Assign / Bind / Modify /
-Inventory) — install it once the package is in and HA has restarted.
+Inventory), plus a **Notifications** tab for muting/unmuting the phone-alert
+categories — install it once the package is in and HA has restarted.
 
 1. **Install the three HACS frontend cards** (HACS → Frontend): Mushroom,
    card-mod, auto-entities. Without them you'll see red "Custom element doesn't
@@ -144,10 +151,7 @@ Profiles the printer has seen before need nothing, ever again.
 
 Each dashboard tab carries inline hint cards (what to scan, what each
 status means), so you can operate SpoolTap day-to-day from the dashboard
-alone. The full written manual (`NFC_FILAMENT_WORKFLOW.md`) — the Modify
-Spool inventory workbench, Profile Sync nuances, notification toggles, the
-Cancel button, and every status message explained — is being prepared and
-will land in this repo.
+alone — no separate manual required.
 
 ## Troubleshooting quick hits
 
