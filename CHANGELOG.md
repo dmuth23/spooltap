@@ -28,6 +28,12 @@ All notable changes to SpoolTap are recorded here.
   after a restart — delete the `initial: true` lines if you want mutes to persist.
 
 ### Fixed
+- Inventory tab spool grid rendered "Configuration Error" on every spool.
+  The `auto-entities` card had its `options:` (the per-spool card template)
+  at the top level instead of nested inside `filter.include[]`, where
+  `auto-entities` reads it. With no template, it emitted typeless card stubs
+  and Home Assistant rendered each as a configuration error. Moving `options:`
+  inside the include entry restores the spool cards (name + photo + remaining).
 - Reconciler one-spool-two-slots oscillation. If a spool was registered in two
   Bambuddy slot rows at once (an AMS slot plus a stale `external` ghost), the
   auto-heal loop flapped Spoolman's `nfc_active_tray` between the two slots

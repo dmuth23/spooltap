@@ -495,13 +495,13 @@ views:
           attributes:
             device_class: weight
             archived: false
-      options:
-        type: custom:mushroom-entity-card
-        use_entity_picture: true
-        primary_info: name
-        secondary_info: state
-        tap_action:
-          action: more-info
+          options:
+            type: custom:mushroom-entity-card
+            use_entity_picture: true
+            primary_info: name
+            secondary_info: state
+            tap_action:
+              action: more-info
 - title: Notifications
   path: spooltap-notifications
   icon: mdi:bell-cog
