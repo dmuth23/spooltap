@@ -102,6 +102,9 @@ class SpoolTapFlows:
         self.options: dict[str, list[str]] = {k: [v] for k, v in PLACEHOLDERS.items()}
         self.texts: dict[str, str] = {"mod_name": "", "tag_input": ""}
         self.numbers: dict[str, float] = {"mod_core": 250.0, "mod_gross": 0.0, "mod_net": 0.0}
+        # {canonical tag -> HA registry friendly name}; rebuilt each recompute so the pickers
+        # can show the physical label the user reads off the spool. Empty on a virgin system.
+        self._tag_names: dict[str, str] = {}
         # serialize scan handling — the YAML dispatch was mode:queued; without this,
         # two rapid scans race (double-assign to one pending, arm/clear interleave)
         self._dispatch_lock = asyncio.Lock()
@@ -140,13 +143,13 @@ class SpoolTapFlows:
     def loaded_spool(self) -> SpoolModel | None:
         return (self.coordinator.data or {}).get(self.loaded_spool_id)
 
-    def tag_role_detail(self) -> tuple[str, str]:
-        """The tag-in-hand classification (port of the STV2 Tag In Hand template):
-        role none/slot/spool/unbound + a human detail; spool wins over slot."""
-        tag = self.last_scanned
-        if not tag:
-            return ("none", "")
+    def _role_for_tag(self, tag: str) -> tuple[str, str]:
+        """Classify an ARBITRARY tag: role none/slot/spool/unbound + a human detail
+        (spool wins over slot). The tag-in-hand sensor and the bind preview share this so
+        the preview classifies the tag Bind will actually commit, not just the last scan."""
         want = canonical_tag(tag)
+        if not want:
+            return ("none", "")
         role, detail = "unbound", ""
         if slot := self._slot_for_tag(tag):
             role, detail = "slot", slot["label"]
@@ -154,6 +157,10 @@ class SpoolTapFlows:
             if model.tag_uid and canonical_tag(model.tag_uid) == want:
                 role, detail = "spool", f"spool #{spool_id}"
         return role, detail
+
+    def tag_role_detail(self) -> tuple[str, str]:
+        """The tag-in-hand classification (port of the STV2 Tag In Hand template)."""
+        return self._role_for_tag(self.last_scanned)
 
     # ------------------------------------------------------------ slot lookups
     def _slot_by_key(self, key: str | None) -> dict | None:
@@ -193,6 +200,9 @@ class SpoolTapFlows:
             spool_id = _parse_spool_id(option)  # port of stv2_mod_pick_load
             if spool_id > 0:
                 self._mod_load(spool_id)
+        # keep the status line == what Bind will commit whenever a bind input changes
+        if self.bind_mode and key in ("bind_spool", "bind_tag", "bind_slot"):
+            self._bind_preview()
         self._notify()
 
     @callback
@@ -204,11 +214,19 @@ class SpoolTapFlows:
     @callback
     def async_set_bind_mode(self, on: bool) -> None:
         self.bind_mode = on
+        if on:
+            # entering Bind: drop any stale registry pick / paste so a 42-min-old selection
+            # can't silently outrank the tag about to be scanned (the #51 misfire), then preview
+            self.selections["bind_tag"] = PLACEHOLDERS["bind_tag"]
+            self.texts["tag_input"] = ""
+            self._bind_preview()
         self._notify()
 
     @callback
     def async_set_text(self, key: str, value: str) -> None:
         self.texts[key] = value
+        if key == "tag_input" and self.bind_mode:
+            self._bind_preview()  # the pasted-UID path must preview too (display == action)
         self._notify()
 
     @callback
@@ -239,8 +257,11 @@ class SpoolTapFlows:
             return
         self.last_scanned = tag  # identical re-scan just re-runs (no clear-then-set)
         if self.bind_mode:
-            # registration owns the scanner (bind actions read last_scanned)
-            self.status = f"Tag …{tag[-8:]} in hand — pick its spool or slot below, then press Bind."
+            # a fresh scan is the authoritative tag: drop any stale registry pick / paste so it
+            # can't silently outrank the scan (the #51 misfire), then preview what Bind will do
+            self.selections["bind_tag"] = PLACEHOLDERS["bind_tag"]
+            self.texts["tag_input"] = ""
+            self._bind_preview()
             self._notify()
             return
         if slot := self._slot_for_tag(tag):
@@ -364,13 +385,44 @@ class SpoolTapFlows:
 
     # ------------------------------------------------------------ bind actions
     def _tag_for_bind(self) -> str:
-        """Tag precedence, port of the bind scripts: registry pick -> typed -> last scan."""
+        """Tag precedence, port of the bind scripts: registry pick -> typed -> last scan.
+        A bind-mode scan now clears the pick/typed fields first, so a stale pick can no
+        longer outrank a fresh scan; an EXPLICIT post-scan pick still wins, by design."""
         picked = self.selections["bind_tag"]
         if picked != "Select…" and "[" in picked:
             return picked.split("[")[1].rstrip("]")
         if typed := self.texts["tag_input"]:
             return typed
         return self.last_scanned
+
+    def _bind_preview(self) -> None:
+        """Set the status to EXACTLY what pressing Bind will commit — same tag source the
+        button uses (`_tag_for_bind`) and that tag's role — so the display can never disagree
+        with the action (the root of the #51 misfire). Target-aware: a slot/tray tag headed
+        for a spool is flagged as blocked; a spool tag headed for a slot is flagged as a move."""
+        tag = self._tag_for_bind()
+        if not tag:
+            self.status = "Bind mode: scan a tag, pick one from the registry, or paste a UID."
+            return
+        want = canonical_tag(tag)
+        name = self._tag_names.get(want) or f"tag …{tag[-8:].upper()}"
+        role, detail = self._role_for_tag(tag)
+        spool_id = _parse_spool_id(self.selections["bind_spool"])
+        slot = self._slot_by_label(self.selections["bind_slot"])
+        warn = ""
+        if spool_id > 0:
+            tgt = f"spool #{spool_id}"
+            if role == "slot":
+                warn = f"  ⚠️ that tag is registered to {detail} — binding it to a spool is blocked"
+            elif role == "spool":
+                warn = f"  ⚠️ already on {detail}; Bind will move it here"
+        elif slot is not None:
+            tgt = slot["label"]
+            if role == "spool":
+                warn = f"  ⚠️ that tag is on {detail}; recycle it off the spool first"
+        else:
+            tgt = "— pick a spool or a slot below"
+        self.status = f"Ready: bind {name} → {tgt}. Press Bind to confirm.{warn}"
 
     async def async_bind_spool(self) -> None:
         """Port of stv2_bind_spool — same code path as spooltap.recycle_tag (fresh
@@ -379,6 +431,24 @@ class SpoolTapFlows:
         spool_id = _parse_spool_id(self.selections["bind_spool"])
         if not tag or spool_id < 1:
             self.status = "Bind needs both: a tag (scan, pick, or paste) and a spool."
+            self._notify()
+            return
+        # guard: a tag registered to an AMS slot/tray must not also become a spool tag
+        # (the #51 misfire — a stale slot-tag pick bound onto a spool)
+        want = canonical_tag(tag)
+        slot = next(
+            (
+                s
+                for s in self.coordinator.slots
+                if want and canonical_tag(self.coordinator.slot_tags.get(s["key"]) or "") == want
+            ),
+            None,
+        )
+        if slot is not None:
+            self.status = (
+                f"⚠️ That tag is registered to {slot['label']} (a slot/tray tag). "
+                "Unbind the slot first, or use a different tag."
+            )
             self._notify()
             return
         try:
@@ -406,6 +476,15 @@ class SpoolTapFlows:
         slot = self._slot_by_label(self.selections["bind_slot"])
         if not tag or slot is None:
             self.status = "Bind needs both: a tag and a slot."
+            self._notify()
+            return
+        # symmetric guard: a tag that's a live spool tag must not also become a slot tag
+        spool_id = self.coordinator.resolve_tag_local(tag)
+        if spool_id is not None:
+            self.status = (
+                f"⚠️ That tag is bound to spool #{spool_id}. "
+                "Recycle it off the spool first, or use a different tag for the slot."
+            )
             self._notify()
             return
         co = self.coordinator
@@ -537,11 +616,14 @@ class SpoolTapFlows:
             for m in (self.coordinator.data or {}).values()
         ]
 
-    @staticmethod
-    def _spool_label(s: dict, *, tag_check: bool = False) -> str:
-        label = f"#{s['id']} — {s['brand'] or ''} {s['color'] or s['material']} ({s['material']})"
-        if tag_check and s["tag"]:
-            label += " ✓"
+    def _spool_label(self, s: dict) -> str:
+        # short hyphen (was an em-dash) + the HA tag's friendly name when the spool has a tag,
+        # so the option matches the physical label the user reads off the spool. Prefix
+        # "#<id>" is preserved verbatim so _parse_spool_id still extracts the id.
+        label = f"#{s['id']} - {s['brand'] or ''} {s['color'] or s['material']} ({s['material']})"
+        if s["tag"]:
+            name = self._tag_names.get(canonical_tag(s["taguid"] or ""))
+            label += f"  ·  {name}" if name else "  ·  (tag not in HA)"
         return label
 
     def _fallback(self, key: str) -> None:
@@ -554,6 +636,7 @@ class SpoolTapFlows:
         """Port of stv2_rebuild_pickers (+ its automation): recompute every picker's
         options from the coordinator. Narrowing order matters — a brand falling back
         to Any must widen the type/spool computed after it."""
+        self._tag_names = self._tag_names_by_canonical()  # for the enriched spool/tag labels
         spools = self._spools_snapshot()
         opts = self.options
         opts["mode"] = MODE_OPTIONS
@@ -584,7 +667,7 @@ class SpoolTapFlows:
         self._fallback("bind_type")
         mat = self.selections["bind_type"]
         opts["bind_spool"] = ["Select…"] + [
-            self._spool_label(s, tag_check=True)
+            self._spool_label(s)
             for s in bindset
             if (brand == "Any" or s["brand"] == brand)
             and (mat == "Any" or s["material"] == mat)
@@ -614,7 +697,8 @@ class SpoolTapFlows:
         opts["mod_open_spool"] = ["Select…"] + [self._spool_label(s) for s in spools]
         self._fallback("mod_open_spool")
         opts["mod_open_tag"] = ["Any"] + [
-            f"#{s['id']} — {s['color'] or s['material']} [{(s['taguid'] or '')[-8:]}]"
+            f"#{s['id']} - {s['color'] or s['material']}  ·  "
+            f"{self._tag_names.get(canonical_tag(s['taguid'] or '')) or '(tag not in HA)'}"
             for s in spools
             if s["tag"]
         ]
@@ -629,6 +713,30 @@ class SpoolTapFlows:
         self._fallback("assign_slot")
         opts["bind_slot"] = ["Select…"] + slot_labels
         self._fallback("bind_slot")
+
+    def _tag_names_by_canonical(self) -> dict[str, str]:
+        """{canonical_tag: friendly_name} for every HA registry tag, so a spool's tag_uid can
+        show the physical label the user reads off the spool. Same source as
+        `_tag_registry_options`; returns {} on a virgin system (no `tag` data) — never raises."""
+        out: dict[str, str] = {}
+        try:
+            items = self.hass.data["tag"].async_items()
+            registry = er.async_get(self.hass)
+            for item in items:
+                tag_id = str(item.get("id") or "")
+                if not tag_id:
+                    continue
+                name = None
+                if entity_id := registry.async_get_entity_id("tag", "tag", tag_id):
+                    if entry := registry.async_get(entity_id):
+                        name = entry.name or entry.original_name
+                out[canonical_tag(tag_id)] = name or f"Tag {tag_id[-8:]}"
+        except Exception:  # noqa: BLE001 - storage shape changed -> states fallback
+            for state in self.hass.states.async_all("tag"):
+                tag_id = str(state.attributes.get("tag_id") or "")
+                if tag_id:
+                    out[canonical_tag(tag_id)] = state.name or f"Tag {tag_id[-8:]}"
+        return out
 
     def _tag_registry_options(self) -> list[str]:
         """HA tag registry entries as `name [tag_id]`.
