@@ -337,11 +337,11 @@ var rows = groups.map(function (g) {
     var parts = String(s.label).split(' · ');
     var short = parts.length > 1 ? parts[1] : parts[0];
     var tagdot = s.tag_uid ? `<span style='position:absolute;top:4px;right:5px;width:7px;height:7px;border-radius:50%;background:#00e5ff;box-shadow:0 0 6px #00e5ff;'></span>` : ``;
-    return `<div style='position:relative;` + basis + `min-width:58px;height:60px;border-radius:10px;background:` + col + `;border:1px solid rgba(255,255,255,0.14);` + (isArmed ? `box-shadow:0 0 14px rgba(245,158,11,0.9),0 0 0 2px #f59e0b;` : `box-shadow:inset 0 0 0 1.5px rgba(255,255,255,0.22),inset 0 -8px 12px rgba(0,0,0,0.35);`) + `display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:4px;'>` + tagdot
+    return `<div style='position:relative;box-sizing:border-box;` + basis + `min-width:58px;height:60px;border-radius:10px;background:` + col + `;border:1px solid rgba(255,255,255,0.14);` + (isArmed ? `box-shadow:0 0 14px rgba(245,158,11,0.9),0 0 0 2px #f59e0b;` : `box-shadow:inset 0 0 0 1.5px rgba(255,255,255,0.22),inset 0 -8px 12px rgba(0,0,0,0.35);`) + `display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:4px;'>` + tagdot
       + (o ? `<span style='font-size:9.5px;color:#fff;text-shadow:0 1px 2px #000;max-width:94%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'>#` + o.id + ` ` + o.name + `</span>` : `<span style='font-size:9.5px;color:rgba(255,255,255,0.4);'>empty</span>`)
       + `<span style='font-size:10px;font-weight:700;color:rgba(255,255,255,0.85);text-shadow:0 1px 2px #000;'>` + short + `</span></div>`;
   }).join('');
-  return `<div><div style='font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px;'>` + g.name + `</div><div style='display:flex;gap:7px;flex-wrap:wrap;'>` + chips + `</div></div>`;
+  return `<div><div style='font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px;'>` + g.name + `</div><div style='display:flex;gap:7px;'>` + chips + `</div></div>`;
 }).join('');
 return `<div style='display:flex;flex-direction:column;gap:11px;'>` + rows + `</div>`;
 """
