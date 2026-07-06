@@ -300,9 +300,11 @@ _HERO_CARD = _js_card(
 
 
 # ---------------------------------------------------------------- AMS slot strip
-# The Bridge's tray strip, from SpoolTap's own data: one chip per AMS slot showing
-# the occupying spool's color/name; the ARMED slot glows amber; a cyan dot = the
-# slot has an NFC tag bound. Dynamic (slot count comes from Bambuddy at runtime).
+# The Bridge's tray strip, from SpoolTap's own data: one labeled row per AMS unit
+# (so a 2-AMS + external rig reads as 4+4+1, not an arbitrary flex-wrap), one chip
+# per slot showing the occupying spool's color/name; the ARMED slot glows amber; a
+# cyan dot = the slot has an NFC tag bound. Chip widths are sized to the largest
+# unit so columns align across rows. Dynamic (layout comes from Bambuddy at runtime).
 _STRIP_JS = """
 var sl = states['sensor.spooltap_slots'];
 var slots = (sl && sl.attributes && sl.attributes.slots) ? sl.attributes.slots : [];
@@ -319,17 +321,29 @@ Object.keys(states).forEach(function (k) {
       occ[a.assigned_ams_id + '_' + a.assigned_tray_id] = { id: a.spool_id, name: a.color_name || e.state, rgba: a.rgba };
   }
 });
-var out = slots.map(function (s) {
-  var o = occ[s.key];
-  var col = (o && o.rgba) ? ('#' + String(o.rgba).replace('#', '').substring(0, 6)) : 'rgba(255,255,255,0.05)';
-  var isArmed = armed && s.label === armed;
-  var short = String(s.label).replace(' AMS', '').replace('AMS ', '').replace(' · Tray ', ' ');
-  var tagdot = s.tag_uid ? `<span style='position:absolute;top:4px;right:5px;width:7px;height:7px;border-radius:50%;background:#00e5ff;box-shadow:0 0 6px #00e5ff;'></span>` : ``;
-  return `<div style='position:relative;flex:1;min-width:58px;height:60px;border-radius:10px;background:` + col + `;border:1px solid rgba(255,255,255,0.14);` + (isArmed ? `box-shadow:0 0 14px rgba(245,158,11,0.9),0 0 0 2px #f59e0b;` : `box-shadow:inset 0 0 0 1.5px rgba(255,255,255,0.22),inset 0 -8px 12px rgba(0,0,0,0.35);`) + `display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:4px;'>` + tagdot
-    + (o ? `<span style='font-size:9.5px;color:#fff;text-shadow:0 1px 2px #000;max-width:94%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'>#` + o.id + ` ` + o.name + `</span>` : `<span style='font-size:9.5px;color:rgba(255,255,255,0.4);'>empty</span>`)
-    + `<span style='font-size:10px;font-weight:700;color:rgba(255,255,255,0.85);text-shadow:0 1px 2px #000;'>` + short + `</span></div>`;
+var groups = [], byId = {};
+slots.forEach(function (s) {
+  var g = byId[s.ams_id];
+  if (!g) { g = { name: String(s.label).split(' · ')[0], slots: [] }; byId[s.ams_id] = g; groups.push(g); }
+  g.slots.push(s);
+});
+var maxLen = groups.reduce(function (m, g) { return Math.max(m, g.slots.length); }, 1);
+var basis = `flex:0 1 calc(` + (100 / maxLen).toFixed(2) + `% - 6px);`;
+var rows = groups.map(function (g) {
+  var chips = g.slots.map(function (s) {
+    var o = occ[s.key];
+    var col = (o && o.rgba) ? ('#' + String(o.rgba).replace('#', '').substring(0, 6)) : 'rgba(255,255,255,0.05)';
+    var isArmed = armed && s.label === armed;
+    var parts = String(s.label).split(' · ');
+    var short = parts.length > 1 ? parts[1] : parts[0];
+    var tagdot = s.tag_uid ? `<span style='position:absolute;top:4px;right:5px;width:7px;height:7px;border-radius:50%;background:#00e5ff;box-shadow:0 0 6px #00e5ff;'></span>` : ``;
+    return `<div style='position:relative;` + basis + `min-width:58px;height:60px;border-radius:10px;background:` + col + `;border:1px solid rgba(255,255,255,0.14);` + (isArmed ? `box-shadow:0 0 14px rgba(245,158,11,0.9),0 0 0 2px #f59e0b;` : `box-shadow:inset 0 0 0 1.5px rgba(255,255,255,0.22),inset 0 -8px 12px rgba(0,0,0,0.35);`) + `display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:4px;'>` + tagdot
+      + (o ? `<span style='font-size:9.5px;color:#fff;text-shadow:0 1px 2px #000;max-width:94%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'>#` + o.id + ` ` + o.name + `</span>` : `<span style='font-size:9.5px;color:rgba(255,255,255,0.4);'>empty</span>`)
+      + `<span style='font-size:10px;font-weight:700;color:rgba(255,255,255,0.85);text-shadow:0 1px 2px #000;'>` + short + `</span></div>`;
+  }).join('');
+  return `<div><div style='font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px;'>` + g.name + `</div><div style='display:flex;gap:7px;flex-wrap:wrap;'>` + chips + `</div></div>`;
 }).join('');
-return `<div style='display:flex;gap:7px;flex-wrap:wrap;'>` + out + `</div>`;
+return `<div style='display:flex;flex-direction:column;gap:11px;'>` + rows + `</div>`;
 """
 
 
@@ -626,7 +640,10 @@ DASHBOARD_CONFIG: dict[str, Any] = {
             "icon": DASHBOARD_ICON,
             "type": "sections",
             "max_columns": 2,
-            "background": {"image": _BG_IMAGE},
+            # Legacy STRING form on purpose: HA applies a string as raw CSS
+            # `background`, while the object form wraps `image` in url(...),
+            # which silently breaks CSS gradients (verified live 2026-07-06).
+            "background": _BG_IMAGE,
             "sections": [
                 {
                     "type": "grid",
