@@ -1,7 +1,7 @@
 # SpoolTap
 
-[![Open your Home Assistant instance and open this repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=dmuth23&repository=spooltap2&category=integration)
-[![GitHub release](https://img.shields.io/github/v/release/dmuth23/spooltap2)](https://github.com/dmuth23/spooltap2/releases)
+[![Open your Home Assistant instance and open this repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=dmuth23&repository=spooltap&category=integration)
+[![GitHub release](https://img.shields.io/github/v/release/dmuth23/spooltap)](https://github.com/dmuth23/spooltap/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **Phone-NFC filament tracking for Home Assistant, native to [Bambuddy](https://bambuddy.io) — no Spoolman.**
@@ -13,7 +13,7 @@ native inventory.
 
 > **Status: Beta.** Built and live-verified against a real Bambuddy + HAOS (entities, two-tap
 > assign, weight recertification, dashboard auto-install). It works, it's in daily use by its
-> author, and it's still young — expect rough edges and please [open issues](https://github.com/dmuth23/spooltap2/issues).
+> author, and it's still young — expect rough edges and please [open issues](https://github.com/dmuth23/spooltap/issues).
 
 ## Features
 
@@ -68,7 +68,7 @@ native inventory.
 ### 1. Get the integration (HACS)
 
 Click the badge at the top of this page, **or** manually: HACS → ⋮ → **Custom repositories** →
-add `https://github.com/dmuth23/spooltap2`, category **Integration**. (SpoolTap isn't in the
+add `https://github.com/dmuth23/spooltap`, category **Integration**. (SpoolTap isn't in the
 HACS default store yet, so the custom-repository step is required for now.)
 
 Install **SpoolTap**, then **restart Home Assistant**.

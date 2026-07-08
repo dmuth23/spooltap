@@ -28,7 +28,7 @@ is read.
 
 ## Install
 
-1. HACS → ⋮ → **Custom repositories** → `https://github.com/dmuth23/spooltap2`, category
+1. HACS → ⋮ → **Custom repositories** → `https://github.com/dmuth23/spooltap`, category
    **Integration** → install **SpoolTap** → **restart Home Assistant**.
 2. Settings → Devices & Services → **Add Integration** → **SpoolTap** → enter your Bambuddy
    URL. `cannot_connect` means your HA box can't reach Bambuddy — that's a networking fix
